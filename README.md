@@ -1,5 +1,5 @@
 # Self-Supervised_Learning_Sample
-自己教師あり計量学習のサンプルコード
+自己教師あり学習のサンプルコード
 
 ## SimCLR
 ![SimCLR](./fig/SimCLR.png)
