@@ -13,44 +13,42 @@ class FeatureExtractor(nn.Module):
 
         # ResNet-50のベースモデル
         self.base_model = resnet50(pretrained=False) 
+        self.dim_mlp = self.base_model.fc.in_features
         self.features = nn.Sequential(*list(self.base_model.children())[:-1]) # 最後の分類層を除外
         self.flatten = nn.Flatten() # 出力をフラット化
         self.proj_dim = 128 # Projectorの出力次元
         self.prev_dim = 512 # Predictorの入力次元
-        self.out_dim = 2048 # Predictorの出力次元
 
         if method == 'SimCLR':
             # Projectorの定義
-            dim_mlp = self.base_model.fc.in_features
             self.projector = nn.Sequential(
-                nn.Linear(dim_mlp, dim_mlp),
+                nn.Linear(self.dim_mlp, self.dim_mlp),
                 nn.ReLU(),
-                nn.Linear(dim_mlp, self.proj_dim)
+                nn.Linear(self.dim_mlp, self.proj_dim)
             )
             
-        elif method == 'SimSimam':
+        elif method == 'SimSiam':
             # Projectorの定義
-            dim_mlp = self.base_model.fc.in_features
             self.projector = nn.Sequential(
-                nn.Linear(self.prev_dim, self.prev_dim, bias=False),
+                nn.Linear(self.dim_mlp, self.prev_dim, bias=False),
                 nn.BatchNorm1d(self.prev_dim),
                 nn.ReLU(inplace=True), 
                 nn.Linear(self.prev_dim, self.prev_dim, bias=False),
                 nn.BatchNorm1d(self.prev_dim),
                 nn.ReLU(inplace=True), 
-                self.encoder.fc,
-                nn.BatchNorm1d(self.out_dim, affine=False) 
+                nn.Linear(self.prev_dim, self.dim_mlp, bias=False),
+                nn.BatchNorm1d(self.dim_mlp, affine=False) 
             )
             self.predictor = nn.Sequential(
-                nn.Linear(self.out_dim, self.prev_dim, bias=False),
+                nn.Linear(self.dim_mlp, self.prev_dim, bias=False),
                 nn.BatchNorm1d(self.prev_dim),
                 nn.ReLU(inplace=True),
-                nn.Linear(self.prev_dim, self.out_dim)
+                nn.Linear(self.prev_dim, self.dim_mlp)
             )
 
         else:
             # Fine Tuning用の出力層を定義
-            self.fc = nn.Linear(dim_mlp, num_classes)
+            self.fc = nn.Linear(self.dim_mlp, num_classes)
 
     def forward(self, x):
         # Encoder部分
@@ -75,12 +73,14 @@ class FeatureExtractor(nn.Module):
 
     def forward_simsiam(self, x1, x2):
         # Encoder部分
-        z1 = self.features(x1)
-        z2 = self.features(x2)
-
+        x1 = self.features(x1)
+        x1 = self.flatten(x1)
+        x2 = self.features(x2)
+        x2 = self.flatten(x2)
+        
         # Projector部分
-        z1 = self.projector(z1)
-        z2 = self.projector(z1)
+        z1 = self.projector(x1)
+        z2 = self.projector(x2)
         
         # Predictor部分
         p1 = self.predictor(z1)

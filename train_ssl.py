@@ -7,7 +7,7 @@ import torchvision
 import torchvision.transforms as transforms
 
 from base_model import FeatureExtractor
-from ssl_loss import NT_Xent, Consine_loss
+from ssl_loss import NT_Xent, Negative_CosineSimilarity
 from trainer import train_simclr, train_simsiam
 from data_aug.contrastive_learning_dataset import SimCLRTransform, ContrastiveLearningDataset
 
@@ -46,11 +46,11 @@ def main(args):
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2) # データローダー
 
     if method == 'SimCLR':
-        model = FeatureExtractor(mode='SimCLR').to(device) # エンコーダ
+        model = FeatureExtractor(method='SimCLR').to(device) # エンコーダ
         criterion = NT_Xent(tmp=tmp) # 損失関数
     elif method == 'SimSiam':
-        model = FeatureExtractor(mode='SimSiam').to(device) # エンコーダ
-        criterion = Consine_loss(dim=dim) # 損失関数
+        model = FeatureExtractor(method='SimSiam').to(device) # エンコーダ
+        criterion = Negative_CosineSimilarity(dim=dim) # 損失関数
 
     optimizer = optim.Adam(model.parameters(), lr=lr) # Optimizer
     print('Encoder:', model)
@@ -58,9 +58,9 @@ def main(args):
     # 学習ループ
     for epoch in range(num_epoch):
         if method == 'SimCLR':
-            sum_loss = train_simclr.train(device, train_loader, model, criterion, optimizer, epoch)
+            sum_loss = train_simclr(device, train_loader, model, criterion, optimizer, epoch)
         elif method == 'SimSiam':
-            sum_loss = train_simsiam.train(device, train_loader, model, criterion, optimizer, epoch)
+            sum_loss = train_simsiam(device, train_loader, model, criterion, optimizer, epoch)
 
         print(f"Epoch [{epoch+1}/10], Loss: {sum_loss/len(train_loader):.4f}")
 
@@ -75,7 +75,7 @@ if __name__=='__main__':
     parser.add_argument("--tmp", type=float, default=0.1)
     parser.add_argument("--dim", type=int, default=1)
     parser.add_argument("--subset", action='store_true')
-    parser.add_argument("--method", type=str, choices=['SimCLR', 'SimSiam'], default="SimCLR")
+    parser.add_argument("--method", type=str, choices=['SimCLR', 'SimSiam'], default='SimCLR')
     args=parser.parse_args()
     main(args)
 

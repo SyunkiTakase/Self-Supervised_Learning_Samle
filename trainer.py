@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from functools import partial
 
-def train_simclr(device, train_loader, model, optimizer, epoch, criterion):
+def train_simclr(device, train_loader, model, criterion, optimizer, epoch):
     model.train()
     
     sum_loss = 0.0
@@ -36,7 +36,7 @@ def train_simclr(device, train_loader, model, optimizer, epoch, criterion):
         
     return sum_loss
 
-def train_simsiam(device, train_loader, model, optimizer, epoch, criterion):
+def train_simsiam(device, train_loader, model, criterion, optimizer, epoch):
     model.train()
     
     sum_loss = 0.0
@@ -48,8 +48,8 @@ def train_simsiam(device, train_loader, model, optimizer, epoch, criterion):
         # 特徴量抽出
         p1, p2, z1, z2 = model.forward_simsiam(view1, view2)
 
-        # Cosine Lossの計算
-        loss = -(criterion(p1, z2).mean() + criterion(p2, z1).mean()) * 0.5
+        # Negative Cosine Similarity Lossの計算
+        loss = criterion(p1, p2, z1, z2)
 
         # 損失のバックプロパゲーションと最適化
         optimizer.zero_grad()

@@ -32,3 +32,28 @@ class NT_Xent(nn.Module):
         loss = -log_prob[torch.arange(2 * batch_size, device=embeddings.device), positive_indices]
 
         return loss.mean()
+
+
+# Negative Cosine Similarity Loss
+class Negative_CosineSimilarity(nn.Module):
+    def __init__(self, dim=1):
+        """
+        Args:
+            dim (float): 次元数
+        """
+        super(Negative_CosineSimilarity, self).__init__()
+        self.dim = dim
+        self.cos_sim = nn.CosineSimilarity(dim=self.dim).to('cuda')
+
+    def forward(self, p1, p2, z1, z2):
+
+        # View1のPredictor出力とView2のProjector出力の類似度
+        loss1 = self.cos_sim(p1, z2).mean()
+        
+        # View2のPredictor出力とView1のProjector出力の類似度
+        loss2 = self.cos_sim(p2, z1).mean() 
+        
+        # 最終的な損失
+        loss = -( loss1 + loss2) * 0.5
+
+        return loss.mean()
