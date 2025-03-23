@@ -5,7 +5,7 @@
 ![SimCLR](./fig/SimCLR.png)
 
 ## SimSiam
-![SimSiam](./fig/SimSiam.jpg)
+![SimSiam](./fig/SimSiam.png)
 
 
 ## 動作環境
