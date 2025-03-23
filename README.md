@@ -1,6 +1,13 @@
 # Self-Supervised_Learning_Sample
 自己教師あり計量学習のサンプルコード
 
+## SimCLR
+![SimCLR](./fig/SimCLR.png)
+
+## SimSiam
+![SimSiam](./fig/SimSiam.png)
+
+
 ## 動作環境
 <details>
 <summary>ライブラリのバージョン</summary>
