@@ -17,7 +17,7 @@ class NT_Xent(nn.Module):
 
         # 内積による類似度行列を計算
         similarity_matrix = torch.mm(embeddings, embeddings.T) / self.tmp  # [2 * batch, 2 * batch]
-        print('AAAAA', similarity_matrix)
+
         # 対角成分を除外するためのマスク
         mask = ~torch.eye(2 * batch_size, device=embeddings.device, dtype=torch.bool)
         
