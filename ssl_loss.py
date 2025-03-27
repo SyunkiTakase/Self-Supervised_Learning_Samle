@@ -21,6 +21,8 @@ class NT_Xent(nn.Module):
         # 対角成分を除外するためのマスク
         mask = torch.eye(2 * batch_size, device=embeddings.device, dtype=torch.bool)
         
+        similarity_matrix = similarity_matrix * mask
+        
         # log-softmax の適用
         log_prob = F.log_softmax(similarity_matrix, dim=1)
 
