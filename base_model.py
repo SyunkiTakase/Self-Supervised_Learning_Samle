@@ -8,18 +8,18 @@ from torchvision.models import resnet50
 
 # ResNet-18の特徴量抽出モデル
 class FeatureExtractor(nn.Module):
-    def __init__(self, method='SimCLR', num_classes=None):
+    def __init__(self, method='SimCLR', tuning=None, num_classes=None):
         super(FeatureExtractor, self).__init__()
 
         # ResNet-50のベースモデル
-        self.base_model = resnet50(pretrained=False) 
-        self.dim_mlp = self.base_model.fc.in_features
-        self.features = nn.Sequential(*list(self.base_model.children())[:-1]) # 最後の分類層を除外
+        self.encoder = resnet50(pretrained=False) 
+        self.dim_mlp = self.encoder.fc.in_features
+        self.encoder.fc = nn.Identity()
         self.flatten = nn.Flatten() # 出力をフラット化
         self.proj_dim = 128 # Projectorの出力次元
         self.prev_dim = 512 # Predictorの入力次元
 
-        if method == 'SimCLR':
+        if method == 'SimCLR' and tuning == None:
             # Projectorの定義
             self.projector = nn.Sequential(
                 nn.Linear(self.dim_mlp, self.dim_mlp),
@@ -27,7 +27,7 @@ class FeatureExtractor(nn.Module):
                 nn.Linear(self.dim_mlp, self.proj_dim)
             )
             
-        elif method == 'SimSiam':
+        elif method == 'SimSiam' and tuning == None:
             # Projectorの定義
             self.projector = nn.Sequential(
                 nn.Linear(self.dim_mlp, self.prev_dim, bias=False),
@@ -52,7 +52,7 @@ class FeatureExtractor(nn.Module):
 
     def forward(self, x):
         # Encoder部分
-        x = self.features(x)
+        x = self.encoder(x)
         x = self.flatten(x)
 
         if self.fc is not None:
@@ -60,22 +60,26 @@ class FeatureExtractor(nn.Module):
 
         return x
 
-    def forward_simclr(self, x):
+    def forward_simclr(self, x1, x2):
         # Encoder部分
-        x = self.features(x)
-        x = self.flatten(x)
+        x1 = self.encoder(x1)
+        x2 = self.encoder(x2)
+        x1 = self.flatten(x1)
+        x2 = self.flatten(x2)
 
         # Projector部分
-        x = self.projector(x)
-        x = F.normalize(x, dim=1)
+        z1 = self.projector(x1)
+        z2 = self.projector(x2)
+        z1 = F.normalize(z1, dim=1)
+        z2 = F.normalize(z2, dim=1)
 
-        return x
+        return z1, z2
 
     def forward_simsiam(self, x1, x2):
         # Encoder部分
-        x1 = self.features(x1)
+        x1 = self.encoder(x1)
+        x2 = self.encoder(x2)
         x1 = self.flatten(x1)
-        x2 = self.features(x2)
         x2 = self.flatten(x2)
         
         # Projector部分

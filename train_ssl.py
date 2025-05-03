@@ -7,7 +7,7 @@ import torchvision
 import torchvision.transforms as transforms
 
 from base_model import FeatureExtractor
-from ssl_loss import NT_Xent, Negative_CosineSimilarity
+from ssl_loss import NT_Xent, Negative_CosSim
 from trainer import train_simclr, train_simsiam
 from data_aug.contrastive_learning_dataset import SimCLRTransform, ContrastiveLearningDataset
 
@@ -37,20 +37,20 @@ def main(args):
         # SimCLRのデータ拡張をサブセットに適用
         simclr_transform = SimCLRTransform(size=img_size, n_views=2)
         train_subset.dataset.transform = simclr_transform  # データセットの変換を更新
-        train_loader = torch.utils.data.DataLoader(train_subset, batch_size=batch_size, shuffle=True) # データローダー
+        train_loader = torch.utils.data.DataLoader(train_subset, batch_size=batch_size, shuffle=True, drop_last=True) # データローダー
 
     else:
         dataset = ContrastiveLearningDataset('./data')
 
         train_dataset = dataset.get_dataset('cifar10', n_views=2)
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2) # データローダー
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2, drop_last=True) # データローダー
 
     if method == 'SimCLR':
         model = FeatureExtractor(method='SimCLR').to(device) # エンコーダ
-        criterion = NT_Xent(tmp=tmp) # 損失関数
+        criterion = NT_Xent(batch_size=batch_size, temperature=tmp) # 損失関数
     elif method == 'SimSiam':
         model = FeatureExtractor(method='SimSiam').to(device) # エンコーダ
-        criterion = Negative_CosineSimilarity(dim=dim) # 損失関数
+        criterion = Negative_CosSim(dim=dim) # 損失関数
 
     optimizer = optim.Adam(model.parameters(), lr=lr) # Optimizer
     print('Encoder:', model)
@@ -62,7 +62,7 @@ def main(args):
         elif method == 'SimSiam':
             sum_loss = train_simsiam(device, train_loader, model, criterion, optimizer, epoch)
 
-        print(f"Epoch [{epoch+1}/10], Loss: {sum_loss/len(train_loader):.4f}")
+        print(f"Epoch [{epoch+1}/{num_epoch}], Loss: {sum_loss/len(train_loader):.4f}")
 
 if __name__=='__main__':
 
